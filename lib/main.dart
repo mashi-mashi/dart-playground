@@ -3,11 +3,22 @@ import 'dart:io';
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/file_system/physical_file_system.dart';
-import 'package:dart_style/dart_style.dart';
+
+extension _ on String {
+  toSnakeCase() {
+    return replaceAllMapped(
+            RegExp(r'[A-Z]'), (Match match) => match.group(0)!.toLowerCase())
+        .toLowerCase();
+  }
+}
+
+extension _1 on String? {
+  bool get safeIsNotEmpty {
+    return this != null && this!.isNotEmpty;
+  }
+}
 
 void main(List<String> args) async {
-  final formatter = DartFormatter();
-
   FileSystemEntity entity = Directory.current;
   if (args.isNotEmpty) {
     String arg = args.first;
@@ -18,6 +29,7 @@ void main(List<String> args) async {
       includedPaths: [entity.absolute.path],
       resourceProvider: PhysicalResourceProvider.INSTANCE);
 
+  final text = [];
   for (final context in collection.contexts) {
     print('Analyzing ${context.contextRoot.root.path} ...');
 
@@ -29,21 +41,41 @@ void main(List<String> args) async {
 
       result.unit.declaredElement?.classes.forEach((classElement) {
         final className = classElement.name;
-        final classDoc = classElement.documentationComment;
+        final classDoc = classElement.documentationComment?.replaceAll('/', '');
 
-        print(
-            '${classDoc != null ? formatter.format('//$classDoc') : ''}\nclass $className {');
+        print('entity ${className.toSnakeCase()} {');
+        text.add('entity ${className.toSnakeCase()} {');
 
-        classElement.fields.where((f) => f.isFinal).forEach((field) {
-          final fieldDoc = field.documentationComment;
-          final fieldName = field.name;
-          final fieldType = field.type.getDisplayString(withNullability: false);
+        classElement.fields.where((f) => f.isFinal).forEach(
+          (field) {
+            final fieldDoc = field.documentationComment?.replaceAll('/', '');
+            final fieldName = field.name;
+            final fieldType =
+                field.type.getDisplayString(withNullability: false);
 
-          field.name;
-          print(
-              '${fieldDoc != null ? formatter.format('//$fieldDoc') : ''}\n  ${fieldName} : ${fieldType}');
-        });
+            field.name;
+            print(' ${fieldName} : ${fieldType} [${fieldDoc}]');
+            text.add(' ${fieldName} : ${fieldType} [${fieldDoc}]');
+          },
+        );
+
+        if (classDoc.safeIsNotEmpty) {
+          print(' ${className} [${classDoc}]');
+          text.add('\n---\n${classDoc}');
+        }
+        text.add('}\n');
       });
     }
+  }
+
+  if (text.isNotEmpty) {
+    final output = [
+      '@startuml',
+      ...text,
+      '@enduml',
+    ];
+
+    final file = File('output.txt');
+    file.writeAsStringSync(output.join('\n'), mode: FileMode.write);
   }
 }

@@ -1,0 +1,20 @@
+@startuml
+entity user {
+ id : int [ The user's unique ID.]
+ name : String [ The user's name.]
+ email : String [ The user's email.]
+ friends : List<Friend> [ The user's friends.]
+
+---
+ USER
+}
+
+entity friend {
+ id : int [ The friend's unique ID.]
+ name : String [ The friend's name.]
+
+---
+ A Friend in the system.
+}
+
+@enduml
