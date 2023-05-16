@@ -21,24 +21,29 @@ void main(List<String> args) async {
   for (final context in collection.contexts) {
     print('Analyzing ${context.contextRoot.root.path} ...');
 
-    for (final filePath in context.contextRoot
-        .analyzedFiles()
-        .where((path) => !path.endsWith('dart'))) {
-      final result = await context.currentSession.getResolvedUnit(filePath);
+    for (final filePath in context.contextRoot.analyzedFiles()) {
+      if (!filePath.endsWith('.dart')) continue;
 
-      if (result is ResolvedUnitResult) {
-        for (final classElement in result.unit.declaredElement?.classes ?? []) {
-          print('  ${classElement.name}');
-          for (final field in classElement.fields) {
-            final docComment = field.documentationComment;
-            final fieldName = field.name;
-            final fieldType =
-                field.type.getDisplayString(withNullability: false);
-            print(
-                '${docComment != null ? formatter.format('//$docComment') : ''}\n  ${fieldName} : ${fieldType}');
-          }
-        }
-      }
+      final result = await context.currentSession.getResolvedUnit(filePath);
+      if (result is! ResolvedUnitResult) continue;
+
+      result.unit.declaredElement?.classes.forEach((classElement) {
+        final className = classElement.name;
+        final classDoc = classElement.documentationComment;
+
+        print(
+            '${classDoc != null ? formatter.format('//$classDoc') : ''}\nclass $className {');
+
+        classElement.fields.where((f) => f.isFinal).forEach((field) {
+          final fieldDoc = field.documentationComment;
+          final fieldName = field.name;
+          final fieldType = field.type.getDisplayString(withNullability: false);
+
+          field.name;
+          print(
+              '${fieldDoc != null ? formatter.format('//$fieldDoc') : ''}\n  ${fieldName} : ${fieldType}');
+        });
+      });
     }
   }
 }
